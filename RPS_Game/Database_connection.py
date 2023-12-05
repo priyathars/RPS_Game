@@ -4,7 +4,6 @@ Class and the method calls in the main file.
 """
 import mysql.connector
 
-
 class MysqlDB:
     def getConnection():
         con = mysql.connector.connect(host='localhost',
@@ -17,4 +16,3 @@ class MysqlDB:
     getConnection()
 
 
-print("Connected to Database")

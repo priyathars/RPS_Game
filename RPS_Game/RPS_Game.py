@@ -3,6 +3,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from Database_connection import MysqlDB
 from datetime import datetime
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +26,6 @@ scissors = 3
 
 choices = [rock, paper, scissors]  # List of the choices of the game
 
-rounds = 1
-tie_count = 0  # total count of tie in the game
-win_count = 0  # total count of win in the game
-lose_count = 0  # total count of lose in th game
 date = datetime.now().strftime('%Y-%m-%d')  # date the player plays
 time = datetime.now().strftime('%H:%M:%S')  # time the player plays
 
@@ -76,54 +73,74 @@ def find_winner(player_choice, computer_choice):  # Conditions to find the winne
         logger.error("That's not a valid play. Check your choice!")
 
 
-player_name = input("Enter your name: ")  # Getting the player's name
+def Game(p_name):
+    tie_count = 0  # total count of tie in the game
+    win_count = 0  # total count of win in the game
+    lose_count = 0  # total count of lose in th game
 
-while True:
-    try:
-        player = int(input("Enter your choice number (rock(1) /paper(2) / scissors(3) ) : "))  # player's choice
-        check_player_choice(player)  # Checking the player's choice
+    rounds = int(input("Enter the rounds you want to play: "))  # rounds of the game
 
-        computer = random.choice(choices)
+    for i in range(1, rounds + 1):
+        try:
+            player = int(input("Enter your choice number (rock(1) /paper(2) / scissors(3) ) : "))  # player's choice
+            check_player_choice(player)  # Checking the player's choice
 
-        print(f"{player_name} chose {player} and computer chose {computer}.")
+            computer = random.choice(choices)
 
-        # find the winner of the game
-        status = find_winner(player, computer)
+            print(f"{p_name} chose {player} and computer chose {computer}.")
 
-        # Condition to count the win, lose and tie
-        if status == "win":
-            win_count += 1
-        elif status == "lose":
-            lose_count += 1
-        else:
-            tie_count += 1
+            # find the winner of the game
+            status = find_winner(player, computer)
 
-        continue_play = input("Want to play again? (y/n): ")
-        if continue_play.lower() != "y":
-            print("Thank you for playing")
-            logger.info("End of the game")
-            break
+            # Condition to count the win, lose and tie
+            if status == "win":
+                win_count += 1
+            elif status == "lose":
+                lose_count += 1
+            else:
+                tie_count += 1
 
-        rounds += 1  # counting the no of rounds the player has played
+        except ValueError:
+            error_message = "Sorry, You entered text instead of a number. Please enter a number between 1 and 3"
+            logger.error(error_message)
+            print(error_message)
 
-    except ValueError:
-        error_message = "Sorry, You entered text instead of a number. Please enter a number between 1 and 3"
-        logger.error(error_message)
-        print(error_message)
+        except IndexError:
+            error_message = "Sorry, you entered an incorrect number. Please enter a number between 1 and 3"
+            logger.error(error_message)
+            print(error_message)
 
-    except IndexError:
-        error_message = "Sorry, you entered an incorrect number. Please enter a number between 1 and 3"
-        logger.error(error_message)
-        print(error_message)
+        except BaseException:
+            error_message = "An error occurred"
+            print(error_message)
+            logger.error(error_message)
 
-    except BaseException as e:
-        error_message = "An error occurred"
-        print(error_message)
-        logger.error(error_message)
+    print('Thank you for playing')
 
-# Inserting the records into the database
+    continue_play = input("Want to play again? (y/n): ")
+    if continue_play.lower() == "y":
+        new_results = Game(p_name)
+        logger.info('Player want to play again')
+        rounds = rounds + new_results[0]
+        win_count = win_count + new_results[1]
+        lose_count = lose_count + new_results[2]
+        tie_count = tie_count + new_results[3]
+    else:
+        print("Thank you for playing ")
+        logger.info("End of the game")
+
+    return [rounds, win_count, lose_count, tie_count]
+
+
+# Starting the game
 try:
-    insert_data = [player_name, date, time, rounds, win_count, lose_count, tie_count]
+    print('Welcome to the Rock,Paper,Scissors Game')
+
+    player_name = input("Enter your name: ")  # Getting the player's name
+    results = Game(player_name)
+
+    # Inserting the records into the database
+    insert_data = [player_name, date, time, results[0], results[1], results[2], results[3]]
     logger.info("Inserting data into database")
     if insert_data:
         con = MysqlDB.getConnection()
@@ -134,6 +151,7 @@ try:
         con.close()
 
         logger.info("Data inserted successfully")
+        input("Press Enter to close the game")
 
 
 except Exception as e:
